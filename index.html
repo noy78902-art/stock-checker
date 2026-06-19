@@ -158,14 +158,14 @@ function exportCSV(){
   // สรุปยอดสุทธิต่อบาร์โค้ด+โลเคชั่น ต่อท้ายไฟล์
   const summaryMap={};
   items.forEach(it=>{
-    const bc=it['บาร์โค้ด']||'—';
-    const loc=it['โลเคชั่น']||'—';
+    const bc=String(it['บาร์โค้ด']||'—');
+    const loc=String(it['โลเคชั่น']||'—');
     const key=bc+'|||'+loc;
     if(!summaryMap[key]) summaryMap[key]={bc,loc,total:0,count:0};
     summaryMap[key].total+=Number(it['นับได้'])||0;
     summaryMap[key].count+=1;
   });
-  const summaryRows=Object.values(summaryMap).sort((a,b)=>a.bc.localeCompare(b.bc)||a.loc.localeCompare(b.loc));
+  const summaryRows=Object.values(summaryMap).sort((a,b)=>String(a.bc).localeCompare(String(b.bc))||String(a.loc).localeCompare(String(b.loc)));
 
   lines.push('');
   lines.push('สรุปยอดสุทธิ');
