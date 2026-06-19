@@ -154,6 +154,29 @@ function exportCSV(){
     const dt=it['วันเวลา']?new Date(it['วันเวลา']).toLocaleString('th-TH'):'';
     lines.push([dt,it['บาร์โค้ด']||'',it['โลเคชั่น']||'',Number(it['นับได้'])||0].map(escCsv).join(','));
   });
+
+  // สรุปยอดสุทธิต่อบาร์โค้ด+โลเคชั่น ต่อท้ายไฟล์
+  const summaryMap={};
+  items.forEach(it=>{
+    const bc=it['บาร์โค้ด']||'—';
+    const loc=it['โลเคชั่น']||'—';
+    const key=bc+'|||'+loc;
+    if(!summaryMap[key]) summaryMap[key]={bc,loc,total:0,count:0};
+    summaryMap[key].total+=Number(it['นับได้'])||0;
+    summaryMap[key].count+=1;
+  });
+  const summaryRows=Object.values(summaryMap).sort((a,b)=>a.bc.localeCompare(b.bc)||a.loc.localeCompare(b.loc));
+
+  lines.push('');
+  lines.push('สรุปยอดสุทธิ');
+  lines.push(['บาร์โค้ด','โลเคชั่น','จำนวนรายการ','ยอดสุทธิ'].join(','));
+  summaryRows.forEach(r=>{
+    lines.push([r.bc,r.loc,r.count,r.total].map(escCsv).join(','));
+  });
+  const grandTotal=summaryRows.reduce((s,r)=>s+r.total,0);
+  lines.push('');
+  lines.push(['รวมทั้งหมด','','',grandTotal].map(escCsv).join(','));
+
   const csv='\uFEFF'+lines.join('\r\n'); // BOM ให้ Excel อ่านภาษาไทยถูก
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
