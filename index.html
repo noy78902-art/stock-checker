@@ -90,7 +90,6 @@ tr:last-child td{border-bottom:none}
   <div class="stats" id="stats">
     <div class="sc"><div class="sc-l">รายการ</div><div class="sc-v">—</div></div>
     <div class="sc"><div class="sc-l">นับได้รวม</div><div class="sc-v">—</div></div>
-    <div class="sc"><div class="sc-l">ผลต่างรวม</div><div class="sc-v">—</div></div>
   </div>
 
   <div class="fc">
@@ -121,6 +120,10 @@ tr:last-child td{border-bottom:none}
   </div>
   <div class="toolbar">
     <span class="ll" id="listLbl">รายการทั้งหมด</span>
+    <button class="btn-exp" onclick="exportCSV()">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export CSV
+    </button>
   </div>
 
   <div id="cardView"></div>
@@ -135,6 +138,29 @@ const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzdbJiDFoZWDcMbQD1vhf
 
 let items = [];
 let view = 'card';
+
+function exportCSV(){
+  if(!items.length){showToast('⚠️ ยังไม่มีข้อมูลให้ export');return;}
+  const headers=['วันเวลา','บาร์โค้ด','โลเคชั่น','นับได้'];
+  const escCsv=v=>{
+    const s=(v===undefined||v===null)?'':String(v);
+    return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+  };
+  const lines=[headers.join(',')];
+  items.forEach(it=>{
+    const dt=it['วันเวลา']?new Date(it['วันเวลา']).toLocaleString('th-TH'):'';
+    lines.push([dt,it['บาร์โค้ด']||'',it['โลเคชั่น']||'',Number(it['นับได้'])||0].map(escCsv).join(','));
+  });
+  const csv='\uFEFF'+lines.join('\r\n'); // BOM ให้ Excel อ่านภาษาไทยถูก
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const ts=new Date().toISOString().slice(0,10);
+  a.href=url;a.download=`สินค้าเกิน_${ts}.csv`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('✅ Export แล้ว');
+}
 
 function showToast(msg, dur=2000){
   const t=document.getElementById('toast');
@@ -235,47 +261,33 @@ function renderList(){
 
   document.getElementById('cardView').innerHTML=items.map((it,i)=>{
     const qty=Number(it['นับได้'])||0;
-    const bc=it['บาร์โค้ด']||'';
+    const bc=it['บาร์โค้ด']||'—';
     const dt=it['วันเวลา']?new Date(it['วันเวลา']).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-    const bcId='bc_'+i;
-    const bcBlock=bc
-      ?`<div class="card-bc"><svg id="${bcId}"></svg><div class="card-bc-val">${bc}</div></div>`
-      :`<div class="card-nobc">ไม่มีบาร์โค้ด</div>`;
-    return `<div class="card">${bcBlock}
+    return `<div class="card">
       <div class="card-body">
         <div class="card-top">
           <div class="csub">${dt}</div>
           <div style="font-size:12px;color:#888">${it['โลเคชั่น']||'—'}</div>
         </div>
+        <div style="font-size:13px;color:#444;margin-bottom:8px;word-break:break-all">บาร์โค้ด: <b>${bc}</b></div>
         <div class="cnt-box"><div class="cnt-lbl">นับได้</div><div class="cnt-num">${qty}</div></div>
       </div>
     </div>`;
   }).join('');
 
-  items.forEach((it,i)=>{
-    const bc=it['บาร์โค้ด']||'';
-    if(bc){try{JsBarcode('#bc_'+i,bc,{format:'CODE128',width:1.5,height:44,displayValue:false,margin:2});}catch(e){}}
-  });
-
   document.getElementById('tableView').innerHTML=`<div class="tbl-wrap"><table>
     <thead><tr><th>บาร์โค้ด</th><th>โลเคชั่น</th><th style="text-align:right">นับได้</th><th>เวลา</th></tr></thead>
     <tbody>${items.map((it,i)=>{
       const qty=Number(it['นับได้'])||0;
-      const bc=it['บาร์โค้ด']||'';
+      const bc=it['บาร์โค้ด']||'—';
       const dt=it['วันเวลา']?new Date(it['วันเวลา']).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-      const btid='tbc_'+i;
       return `<tr>
-        <td>${bc?`<svg id="${btid}" style="height:28px;display:block"></svg>`:'—'}</td>
+        <td>${bc}</td>
         <td style="color:#888">${it['โลเคชั่น']||'—'}</td>
         <td style="text-align:right;font-weight:600">${qty}</td>
         <td style="color:#aaa;white-space:nowrap">${dt}</td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
-
-  items.forEach((it,i)=>{
-    const bc=it['บาร์โค้ด']||'';
-    if(bc){try{JsBarcode('#tbc_'+i,bc,{format:'CODE128',width:1,height:26,displayValue:false,margin:2});}catch(e){}}
-  });
 
   switchView(view);
 }
