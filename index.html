@@ -14,7 +14,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .dot{width:10px;height:10px;border-radius:50%;background:#ccc;flex-shrink:0}
 .dot.ok{background:#3aaa6e}
 .dot.err{background:#e04040}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
 .sc{background:#fff;border-radius:10px;padding:10px 12px;border:1px solid #e5e5e5}
 .sc-l{font-size:11px;color:#888;margin-bottom:3px}
 .sc-v{font-size:20px;font-weight:600;color:#1a1a1a}
@@ -109,11 +109,7 @@ tr:last-child td{border-bottom:none}
     </div>
     <div class="frow">
       <label>③ จำนวนนับได้</label>
-      <input type="number" id="fQty" value="0" min="0" inputmode="numeric">
-    </div>
-    <div class="frow">
-      <label>④ สต็อกในระบบ</label>
-      <input type="number" id="fStock" value="0" min="0" inputmode="numeric">
+      <input type="number" id="fQty" value="1" min="1" inputmode="numeric">
     </div>
     <label class="lock-row"><input type="checkbox" id="fLockLoc" checked> ล็อกโลเคชั่นไว้ใช้ต่อ (สแกนของในโซนเดียวกันต่อเนื่อง)</label>
     <button class="btn-save" id="btnSave" onclick="addItem()">บันทึกเข้า Google Sheet</button>
@@ -125,10 +121,6 @@ tr:last-child td{border-bottom:none}
   </div>
   <div class="toolbar">
     <span class="ll" id="listLbl">รายการทั้งหมด</span>
-    <button class="btn-exp" onclick="loadData()">
-      <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.45"/></svg>
-      โหลดใหม่
-    </button>
   </div>
 
   <div id="cardView"></div>
@@ -138,7 +130,7 @@ tr:last-child td{border-bottom:none}
 
 <script>
 // ====== ตั้งค่า URL ตรงนี้ ======
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxBwKOSLyNvfzTKYGn3vcvHetg1Praj6xbAUtTLgn5Lnvawpu_B1A7vm34Tc3hndDuzHg/exec';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzdbJiDFoZWDcMbQD1vhftvTgtlQsEM9eklUhIYaaDZkS2Az-LGfY8jT_JgLsfozKoG6g/exec';
 // ================================
 
 let items = [];
@@ -177,8 +169,7 @@ function previewBarcode(){
 async function addItem(){
   if(SHEET_URL==='YOUR_WEB_APP_URL_HERE'){showToast('⚠️ ยังไม่ได้ใส่ SHEET_URL');return;}
   const barcode=document.getElementById('fBarcode').value.trim();
-  const qty=Math.max(0,parseInt(document.getElementById('fQty').value)||0);
-  const stock=Math.max(0,parseInt(document.getElementById('fStock').value)||0);
+  const qty=Math.max(1,parseInt(document.getElementById('fQty').value)||1);
   const loc=document.getElementById('fLoc').value.trim()||'—';
   const lockLoc=document.getElementById('fLockLoc').checked;
 
@@ -190,14 +181,13 @@ async function addItem(){
   try{
     const res=await fetch(SHEET_URL,{
       method:'POST',
-      body:JSON.stringify({barcode,qty,stock,loc}),
+      body:JSON.stringify({barcode,qty,loc}),
     });
     const json=await res.json();
     if(json.status==='ok'){
       showToast('✅ บันทึกแล้ว');
       document.getElementById('fBarcode').value='';
-      document.getElementById('fQty').value='0';
-      document.getElementById('fStock').value='0';
+      document.getElementById('fQty').value='1';
       if(!lockLoc) document.getElementById('fLoc').value='';
       document.getElementById('bcPreview').style.display='none';
       setConn(true,'เชื่อมต่อแล้ว');
@@ -231,12 +221,9 @@ async function loadData(){
 
 function renderList(){
   const tq=items.reduce((s,r)=>s+(Number(r['นับได้'])||0),0);
-  const ts=items.reduce((s,r)=>s+(Number(r['สต็อก'])||0),0);
-  const td=tq-ts;
   document.getElementById('stats').innerHTML=`
     <div class="sc"><div class="sc-l">รายการ</div><div class="sc-v">${items.length}</div></div>
-    <div class="sc"><div class="sc-l">นับได้รวม</div><div class="sc-v">${tq}</div></div>
-    <div class="sc"><div class="sc-l">ผลต่างรวม</div><div class="sc-v" style="color:${td>0?'#A32D2D':td<0?'#27500A':'#1a1a1a'}">${td>0?'+':''}${td}</div></div>`;
+    <div class="sc"><div class="sc-l">นับได้รวม</div><div class="sc-v">${tq}</div></div>`;
   document.getElementById('listLbl').textContent=`รายการทั้งหมด (${items.length})`;
 
   const empty=`<div class="empty">ยังไม่มีรายการ</div>`;
@@ -248,10 +235,6 @@ function renderList(){
 
   document.getElementById('cardView').innerHTML=items.map((it,i)=>{
     const qty=Number(it['นับได้'])||0;
-    const stk=Number(it['สต็อก'])||0;
-    const diff=qty-stk;
-    const dc=diff>0?'#A32D2D':diff<0?'#27500A':'#aaa';
-    const dtx=diff>0?`+${diff} เกิน`:diff<0?`${diff} ขาด`:`ตรง`;
     const bc=it['บาร์โค้ด']||'';
     const dt=it['วันเวลา']?new Date(it['วันเวลา']).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
     const bcId='bc_'+i;
@@ -264,15 +247,7 @@ function renderList(){
           <div class="csub">${dt}</div>
           <div style="font-size:12px;color:#888">${it['โลเคชั่น']||'—'}</div>
         </div>
-        <div class="row2">
-          <div class="cnt-box"><div class="cnt-lbl">นับได้</div><div class="cnt-num">${qty}</div></div>
-          <div class="cnt-box"><div class="cnt-lbl">สต็อก</div><div class="cnt-num">${stk}</div></div>
-        </div>
-        <div class="diff-box">
-          <div class="cnt-lbl">ผลต่าง</div>
-          <div style="font-size:22px;font-weight:700;color:${dc}">${diff>0?'+':''}${diff}</div>
-          <div style="font-size:11px;color:${dc};margin-top:2px">${dtx}</div>
-        </div>
+        <div class="cnt-box"><div class="cnt-lbl">นับได้</div><div class="cnt-num">${qty}</div></div>
       </div>
     </div>`;
   }).join('');
@@ -283,12 +258,9 @@ function renderList(){
   });
 
   document.getElementById('tableView').innerHTML=`<div class="tbl-wrap"><table>
-    <thead><tr><th>บาร์โค้ด</th><th>โลเคชั่น</th><th style="text-align:right">นับได้</th><th style="text-align:right">สต็อก</th><th style="text-align:right">ผลต่าง</th><th>เวลา</th></tr></thead>
+    <thead><tr><th>บาร์โค้ด</th><th>โลเคชั่น</th><th style="text-align:right">นับได้</th><th>เวลา</th></tr></thead>
     <tbody>${items.map((it,i)=>{
       const qty=Number(it['นับได้'])||0;
-      const stk=Number(it['สต็อก'])||0;
-      const diff=qty-stk;
-      const dc=diff>0?'diff-pos':diff<0?'diff-neg':'';
       const bc=it['บาร์โค้ด']||'';
       const dt=it['วันเวลา']?new Date(it['วันเวลา']).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
       const btid='tbc_'+i;
@@ -296,8 +268,6 @@ function renderList(){
         <td>${bc?`<svg id="${btid}" style="height:28px;display:block"></svg>`:'—'}</td>
         <td style="color:#888">${it['โลเคชั่น']||'—'}</td>
         <td style="text-align:right;font-weight:600">${qty}</td>
-        <td style="text-align:right">${stk}</td>
-        <td style="text-align:right" class="${dc}">${(diff>0?'+':'')+diff}</td>
         <td style="color:#aaa;white-space:nowrap">${dt}</td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
