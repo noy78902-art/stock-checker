@@ -110,7 +110,7 @@ tr:last-child td{border-bottom:none}
       <label>③ จำนวนนับได้ <span style="color:#aaa;font-weight:400">(กดปุ่ม ± เพื่อลบล้างรายการที่ยิงผิด)</span></label>
       <div style="display:flex;gap:8px">
         <button type="button" id="btnSign" onclick="toggleSign()" style="width:48px;flex-shrink:0;font-size:18px;font-weight:700;border:1px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer">+</button>
-        <input type="text" id="fQty" value="1" inputmode="numeric" style="flex:1">
+        <input type="text" id="fQty" value="1" style="flex:1">
       </div>
     </div>
     <label class="lock-row"><input type="checkbox" id="fLockLoc" checked> ล็อกโลเคชั่นไว้ใช้ต่อ (สแกนของในโซนเดียวกันต่อเนื่อง)</label>
@@ -207,9 +207,9 @@ async function addItem(){
   if(SHEET_URL==='YOUR_WEB_APP_URL_HERE'){showToast('⚠️ ยังไม่ได้ใส่ SHEET_URL');return;}
   const barcode=document.getElementById('fBarcode').value.trim();
   const qtyRaw=parseInt(document.getElementById('fQty').value);
-  const qtyAbs=(isNaN(qtyRaw)||qtyRaw===0)?1:Math.abs(qtyRaw);
+  const qtyVal=(isNaN(qtyRaw)||qtyRaw===0)?1:qtyRaw;
   const isNeg=document.getElementById('btnSign').textContent==='−';
-  const qty=isNeg?-qtyAbs:qtyAbs;
+  const qty=isNeg?-Math.abs(qtyVal):qtyVal;
   const loc=document.getElementById('fLoc').value.trim()||'—';
   const lockLoc=document.getElementById('fLockLoc').checked;
 
