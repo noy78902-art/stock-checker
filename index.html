@@ -100,7 +100,7 @@ tr:last-child td{border-bottom:none}
     </div>
     <div class="frow">
       <label>② บาร์โค้ด</label>
-      <input type="text" id="fBarcode" placeholder="สแกนหรือพิมพ์บาร์โค้ด" oninput="previewBarcode()" autocomplete="off">
+      <input type="text" id="fBarcode" placeholder="สแกนหรือพิมพ์บาร์โค้ด" oninput="previewBarcode()" autocomplete="off" maxlength="14" inputmode="numeric">
       <div class="bc-preview" id="bcPreview">
         <svg id="bcSvgForm"></svg>
         <div class="bc-val" id="bcValForm"></div>
@@ -238,6 +238,10 @@ async function addItem(){
   const lockLoc=document.getElementById('fLockLoc').checked;
 
   if(!barcode){showToast('⚠️ กรุณาสแกนหรือกรอกบาร์โค้ด');return;}
+  if(!/^[0-9]+$/.test(barcode) || barcode.length>14){
+    showToast('⚠️ บาร์โค้ดไม่ถูกต้อง (รับเฉพาะตัวเลข ไม่เกิน 14 หลัก ห้ามยิง QR code)',3500);
+    return;
+  }
 
   const btn=document.getElementById('btnSave');
   btn.disabled=true;btn.textContent='กำลังบันทึก...';
@@ -267,7 +271,11 @@ async function addItem(){
     setConn(false,'เชื่อมต่อไม่ได้');
   }
   btn.disabled=false;btn.textContent='บันทึกเข้า Google Sheet';
-  document.getElementById('fBarcode').focus();
+  if(lockLoc){
+    document.getElementById('fBarcode').focus();
+  } else {
+    document.getElementById('fLoc').focus();
+  }
 }
 
 async function loadData(){
@@ -349,11 +357,27 @@ function renderList(){
       }
       return;
     }
-    if(e.key.length===1){
+    if(/^[0-9]$/.test(e.key)){
+      if(buf.length>=14) return; // เกิน 14 หลัก ไม่รับเพิ่ม
       e.preventDefault();buf+=e.key;
       document.getElementById('fBarcode').value=buf;
       previewBarcode();clearTimeout(timer);
-      timer=setTimeout(()=>{buf='';},300);
+      timer=setTimeout(()=>{
+        // ไม่มี Enter ตามมา (สแกนเนอร์บางรุ่นไม่ส่ง Enter) ให้ auto บันทึกถ้าความยาวดูสมเหตุสมผล
+        if(buf.length>=6){
+          const b=buf;buf='';
+          document.getElementById('fBarcode').value=b;
+          previewBarcode();
+          addItem();
+        } else {
+          buf='';
+        }
+      },300);
+    } else if(e.key.length===1){
+      // ตัวอักษรที่ไม่ใช่ตัวเลข (เช่น จาก QR code) เคลียร์บัฟเฟอร์ทิ้ง ไม่รับ
+      e.preventDefault();
+      buf='';
+      clearTimeout(timer);
     }
   });
 })();
